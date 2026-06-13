@@ -4,6 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>StoryBuddy · 故事伙伴</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400..800&family=Fredoka:wght@400..600&display=swap" rel="stylesheet" />
 <script>
 /* ============================================================
    后端端点：Cloudflare Pages Functions，与前端同网域。
@@ -22,12 +25,13 @@ const WORKER_URL = "/api/generate";
     --chip:#fff; --chip-on:#ffd9c2;
     --shadow:0 10px 30px rgba(120,80,40,.18);
     --radius:22px;
-    --font: ui-rounded, "Quicksand", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+    /* 更圆润、柔性、可爱的字体；中文用圆体 Yuanti SC，英文用 Baloo 2 / Fredoka */
+    --font: "Baloo 2", "Fredoka", "Yuanti SC", "Hannotate SC", ui-rounded, "Quicksand", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
   body{
-    font-family:var(--font); color:var(--ink);
+    font-family:var(--font); color:var(--ink); letter-spacing:.2px;
     background:
       radial-gradient(1200px 600px at 10% -10%, var(--bg3), transparent 60%),
       radial-gradient(1000px 700px at 110% 0%, var(--bg2), transparent 55%),
@@ -38,11 +42,11 @@ const WORKER_URL = "/api/generate";
 
   header.app{display:flex;align-items:center;gap:12px;padding:10px 4px 18px;flex-wrap:wrap}
   .brand{display:flex;align-items:center;gap:12px;flex:1 1 auto;min-width:0}
-  .logo{width:52px;height:52px;border-radius:16px;flex:0 0 auto;
+  .logo{width:52px;height:52px;border-radius:18px;flex:0 0 auto;
     background:linear-gradient(135deg,var(--accent),var(--accent2));
     display:grid;place-items:center;font-size:28px;box-shadow:var(--shadow)}
-  .brand h1{font-size:clamp(22px,5vw,30px);margin:0;line-height:1.1}
-  .brand p{margin:0;color:var(--ink-soft);font-size:13px}
+  .brand h1{font-size:clamp(24px,5vw,32px);margin:0;line-height:1.1;font-weight:800}
+  .brand p{margin:0;color:var(--ink-soft);font-size:13px;font-weight:600}
   .lang-switch{display:inline-flex;background:#fff;border-radius:999px;padding:4px;box-shadow:var(--shadow);gap:2px}
   .lang-switch button{border:0;background:transparent;color:var(--ink-soft);padding:8px 14px;border-radius:999px;
     font-family:inherit;font-weight:700;cursor:pointer;font-size:14px;transition:.2s}
@@ -57,7 +61,7 @@ const WORKER_URL = "/api/generate";
 
   .age-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
   .age-badge{min-width:74px;text-align:center;background:linear-gradient(135deg,var(--accent2),var(--accent2-deep));
-    color:#fff;border-radius:16px;padding:8px 10px;box-shadow:0 6px 16px rgba(90,73,214,.35)}
+    color:#fff;border-radius:18px;padding:8px 10px;box-shadow:0 6px 16px rgba(90,73,214,.35)}
   .age-badge b{font-size:26px;display:block;line-height:1}.age-badge span{font-size:11px;opacity:.9}
   input[type=range]{-webkit-appearance:none;appearance:none;height:14px;border-radius:999px;flex:1 1 200px;
     background:linear-gradient(90deg,var(--accent),var(--accent2));outline-offset:4px}
@@ -67,7 +71,7 @@ const WORKER_URL = "/api/generate";
   .level-pill{display:inline-block;margin-top:10px;background:var(--chip-on);color:var(--accent-deep);
     font-weight:800;padding:6px 14px;border-radius:999px;font-size:13px}
 
-  input[type=text]{width:100%;padding:14px 16px;border-radius:14px;border:2px solid var(--paper-edge);
+  input[type=text]{width:100%;padding:14px 16px;border-radius:16px;border:2px solid var(--paper-edge);
     background:#fff;font-family:inherit;font-size:16px;color:var(--ink)}
   input[type=text]:focus{outline:3px solid var(--accent);border-color:transparent}
 
@@ -97,42 +101,50 @@ const WORKER_URL = "/api/generate";
   #stage{display:none}#stage.show{display:block}
   .book-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap}
   .book-bar .left{display:flex;gap:8px;align-items:center}
-  .btn{border:0;background:#fff;color:var(--ink);padding:11px 16px;border-radius:14px;cursor:pointer;font-family:inherit;
+  .btn{border:0;background:#fff;color:var(--ink);padding:11px 16px;border-radius:16px;cursor:pointer;font-family:inherit;
     font-weight:800;font-size:14px;box-shadow:var(--shadow);display:inline-flex;gap:7px;align-items:center}
+  .btn:hover{transform:translateY(-1px)}
   .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#fff}
   .btn.toggle[aria-pressed="true"]{background:linear-gradient(135deg,var(--accent2),var(--accent2-deep));color:#fff}
 
-  .book-scene{perspective:2200px;display:grid;place-items:center}
-  .book{position:relative;width:min(560px,94vw);aspect-ratio:4/5;border-radius:18px;transform-style:preserve-3d}
-  @media(min-width:760px){.book{width:560px;aspect-ratio:5/6}}
-  .page{position:absolute;inset:0;border-radius:18px;overflow:hidden;background:var(--paper);box-shadow:var(--shadow);
-    display:flex;flex-direction:column;backface-visibility:hidden;border:1px solid var(--paper-edge)}
+  .book-scene{perspective:2400px;display:grid;place-items:center;padding:4px}
+  /* 直式：单页；横式/宽版：两页并排 */
+  .book{position:relative;width:min(440px,92vw);aspect-ratio:3/4;transform-style:preserve-3d}
+  .book.wide{width:min(860px,96vw);aspect-ratio:1.6/1}
+
+  .spread{position:absolute;inset:0;display:flex;border-radius:20px;overflow:hidden;background:var(--paper);
+    box-shadow:var(--shadow);border:1px solid var(--paper-edge)}
+  .spread .page{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;background:var(--paper);overflow:hidden}
+  .spread.two .page:first-child{box-shadow:inset -12px 0 22px -12px rgba(120,80,40,.22)}
+  .spread.two .page:last-child{box-shadow:inset 12px 0 22px -12px rgba(120,80,40,.22)}
+
   .page .art{position:relative;flex:1 1 auto;min-height:0;background:linear-gradient(135deg,#ffe9d6,#f0e6ff);
     display:grid;place-items:center;overflow:hidden}
   .page .art img{width:100%;height:100%;object-fit:cover;display:block;animation:fade .6s ease}
   @keyframes fade{from{opacity:0}to{opacity:1}}
-  .page .art .emoji-fallback{font-size:84px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.15))}
+  .page .art .emoji-fallback{font-size:78px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.15))}
   .img-loading{position:absolute;bottom:10px;right:10px;background:rgba(255,255,255,.85);border-radius:999px;padding:5px 12px;
     font-size:12px;font-weight:700;color:var(--ink-soft);display:flex;align-items:center;gap:7px}
   .img-loading .mini{width:14px;height:14px;border-radius:50%;border:3px solid var(--chip-on);border-top-color:var(--accent-deep);animation:spin .9s linear infinite}
-  .page .text{flex:0 0 auto;padding:18px 22px 22px;background:var(--paper);font-size:clamp(17px,4.4vw,21px);font-weight:600;
-    color:var(--ink);border-top:1px solid var(--paper-edge);max-height:46%;overflow:auto}
+  .page .text{flex:0 0 auto;padding:16px 20px 20px;background:var(--paper);font-size:clamp(16px,2.6vw,20px);font-weight:600;
+    color:var(--ink);border-top:1px solid var(--paper-edge);max-height:44%;overflow:auto}
   .page .pageno{position:absolute;top:12px;left:14px;background:rgba(255,255,255,.85);border-radius:999px;padding:3px 12px;
-    font-size:12px;font-weight:800;color:var(--ink-soft)}
-  .page .pemoji{position:absolute;top:10px;right:14px;font-size:26px}
+    font-size:12px;font-weight:800;color:var(--ink-soft);z-index:2}
+  .page .pemoji{position:absolute;top:10px;right:14px;font-size:26px;z-index:2}
   .page.cover .art{background:linear-gradient(150deg,#ffcaa6,#c9b6ff)}
   .page.cover .cover-overlay{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:26px;
     background:linear-gradient(transparent,rgba(40,20,10,.55));color:#fff}
-  .page.cover h2{font-size:clamp(26px,7vw,40px);margin:0 0 6px;text-shadow:0 3px 12px rgba(0,0,0,.4)}
+  .page.cover h2{font-size:clamp(26px,7vw,40px);margin:0 0 6px;text-shadow:0 3px 12px rgba(0,0,0,.4);font-weight:800}
   .page.cover .by{font-weight:700;opacity:.95;text-shadow:0 2px 8px rgba(0,0,0,.5)}
 
   .tap{position:absolute;top:0;bottom:0;width:34%;z-index:5;cursor:pointer;border:0;background:transparent}
   .tap.l{left:0}.tap.r{right:0}
   .tap:focus-visible{outline:3px solid var(--accent2);outline-offset:-6px;border-radius:18px}
-  .flipper{position:absolute;inset:0;border-radius:18px;transform-style:preserve-3d;z-index:20;pointer-events:none;transform-origin:left center}
-  .flipper .face{position:absolute;inset:0;backface-visibility:hidden;border-radius:18px;overflow:hidden}
+
+  /* 翻页：在书本范围内、绕中轴翻转，底下放好目标页，翻完即定格新页 —— 不会闪出两页 */
+  .flipper{position:absolute;inset:0;transform-style:preserve-3d;z-index:20;pointer-events:none;transform:rotateY(0deg);transform-origin:center}
+  .flipper .face{position:absolute;inset:0;backface-visibility:hidden}
   .flipper .back{transform:rotateY(180deg)}
-  .flipping{box-shadow:-20px 0 40px rgba(0,0,0,.2)}
 
   .nav{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:16px}
   .nav button{width:56px;height:56px;border-radius:50%;border:0;cursor:pointer;font-size:22px;background:#fff;
@@ -142,7 +154,11 @@ const WORKER_URL = "/api/generate";
   .dot{width:9px;height:9px;border-radius:50%;background:var(--paper-edge);cursor:pointer;border:0}
   .dot[aria-current="true"]{background:var(--accent-deep);transform:scale(1.4)}
 
-  body.read-aloud .page .text{font-size:clamp(22px,6vw,30px);font-weight:800;color:#1f1710;background:#fff;line-height:1.55;max-height:60%}
+  .endbar{display:flex;justify-content:center;margin-top:16px}
+  .endbar[hidden]{display:none}
+  .endbar .btn{font-size:16px;padding:14px 22px}
+
+  body.read-aloud .page .text{font-size:clamp(22px,5vw,30px);font-weight:800;color:#1f1710;background:#fff;line-height:1.55;max-height:60%}
   body.read-aloud .page .art{background:#000}
 
   :focus-visible{outline:3px solid var(--accent2);outline-offset:2px}
@@ -201,7 +217,7 @@ const WORKER_URL = "/api/generate";
   <section id="stage">
     <div class="book-bar">
       <div class="left">
-        <button class="btn" id="newBookBtn">↩︎ <span id="newBookTxt">新故事</span></button>
+        <button class="btn" id="saveBtn">💾 <span id="saveTxt">储存绘本</span></button>
       </div>
       <div class="left">
         <button class="btn toggle" id="readAloudBtn" aria-pressed="false">🔆 <span id="readAloudTxt">朗读模式</span></button>
@@ -219,6 +235,9 @@ const WORKER_URL = "/api/generate";
       <div class="dots" id="dots" role="tablist" aria-label="页面"></div>
       <button id="nextBtn" aria-label="下一页">›</button>
     </div>
+    <div class="endbar" id="endBar" hidden>
+      <button class="btn primary" id="againBtn">✨ <span id="againTxt">再做一本绘本</span></button>
+    </div>
   </section>
 
   <footer><span id="footerTxt">用心为小小梦想家打造 · 家长永远是最终把关人。</span></footer>
@@ -226,13 +245,14 @@ const WORKER_URL = "/api/generate";
 
 <script>
 /* ============================================================
-   StoryBuddy 前端 — 透过 Cloudflare Worker 呼叫 Gemini
+   StoryBuddy 前端 — 透过 Cloudflare Pages Function 呼叫 Gemini
    ============================================================ */
 
 /* ---------- 儿童安全规则（前端亦内建一份） ---------- */
 const SAFETY_RULES = `儿童安全（1-12岁）硬性规则，不可妥协：禁止暴力、恐怖、性、爱情，以及任何孩子可能模仿的危险行为（火、火柴、药物、武器、跟陌生人走、爬高处、玩水）。
 不得描绘或指名真实在世名人；若主题涉及名人，改用一般化的正面角色（例如「一位善良的科学家」）。
 若涉及国家/文化，只聚焦美食、风景、节庆与善意，不要刻板印象与政治。
+用词与事物必须真实正确：只使用现实中真实存在的物品、动植物、食物与正确无误的词语；绝不发明虚构物品或编造、拼错的词。
 插图也必须遵守同样安全规则：柔和温暖、绝无暴力/武器/恐怖/真实名人。`;
 
 /* ---------- i18n ---------- */
@@ -242,12 +262,13 @@ const I18N = {
     ageLabel:"孩子的年龄", years:"岁", nameLabel:"孩子的名字", optional:"（可选）", namePh:"例如 小米",
     themeLabel:"故事主题", custom:"或自己输入主题…", surprise:"盲盒手气",
     gen:"生成我们的绘本", privacy:"我们不会储存您孩子的任何资料，一切只在本次使用中。",
-    newBook:"新故事", readAloud:"朗读模式", tts:"语音朗读",
+    save:"储存绘本", saved:"已储存 ✓", again:"再做一本绘本",
+    readAloud:"朗读模式", tts:"语音朗读",
     footer:"用心为小小梦想家打造 · 家长永远是最终把关人。",
     levels:["小小故事 · 非常简单","初级故事 · 温柔的情绪","小小冒险 · 一点小挑战","更长的旅程 · 有思考的主题"],
     writing:"正在为你写一个故事…", drawing:"正在画出美丽的插画",
     error:"生成故事时出了点小问题，请再试一次。",
-    noUrl:"还没设定 Worker 网址。请打开 index.html，在最上方把 WORKER_URL 填成你的 Cloudflare Worker 网址。",
+    noUrl:"还没设定后端网址。请打开 index.html，把最上方的 WORKER_URL 设好。",
     refusedH:"换一个主题试试吧",
     refusedP:"这个主题不太适合做成孩子的睡前故事。要不要试试温馨的主题，比如善良、小动物或海洋？",
     tryAgain:"换个主题",
@@ -259,12 +280,13 @@ const I18N = {
     ageLabel:"Child's age", years:"years old", nameLabel:"Child's name", optional:"(optional)", namePh:"e.g. Mia",
     themeLabel:"Story theme", custom:"Or type your own…", surprise:"Surprise Me",
     gen:"Create our storybook", privacy:"We don't save any of your child's information. Everything stays in this session.",
-    newBook:"New story", readAloud:"Read-aloud", tts:"Narrate",
+    save:"Save book", saved:"Saved ✓", again:"Make another book",
+    readAloud:"Read-aloud", tts:"Narrate",
     footer:"Made with care for little dreamers · Parents are always the final reviewers.",
     levels:["Tiny tales · very simple","First stories · gentle feelings","Little adventures · a small challenge","Bigger journeys · a thoughtful theme"],
     writing:"Writing a story just for you…", drawing:"Bringing the pictures to life",
     error:"Something went wrong while creating the story. Please try again.",
-    noUrl:"Worker URL not set yet. Open index.html and set WORKER_URL at the top to your Cloudflare Worker URL.",
+    noUrl:"Backend URL not set. Open index.html and set WORKER_URL at the top.",
     refusedH:"Let's try another theme",
     refusedP:"That idea isn't quite right for a children's bedtime story. How about something cozy like kindness, animals, or the ocean?",
     tryAgain:"Try another theme",
@@ -294,7 +316,8 @@ function levelFor(age){
 }
 
 /* ---------- 状态 ---------- */
-let lang="zh", selectedTheme="", book=null, cur=0, flipping=false, ttsOn=false;
+let lang="zh", selectedTheme="", book=null;
+let views=[], cur=0, twoUp=false, flipping=false, ttsOn=false;
 const reduceMotion=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const $=id=>document.getElementById(id);
 const statusArea=$("statusArea"), stage=$("stage"), bookEl=$("book");
@@ -309,10 +332,11 @@ function applyLang(){
   $("childName").placeholder=t.namePh;
   $("themeLabel").textContent=t.themeLabel; $("customTheme").placeholder=t.custom; $("surpriseTxt").textContent=t.surprise;
   $("genTxt").textContent=t.gen; $("privacyTxt").textContent=t.privacy;
-  $("newBookTxt").textContent=t.newBook; $("readAloudTxt").textContent=t.readAloud; $("ttsTxt").textContent=t.tts;
+  $("saveTxt").textContent=t.save; $("againTxt").textContent=t.again;
+  $("readAloudTxt").textContent=t.readAloud; $("ttsTxt").textContent=t.tts;
   $("footerTxt").textContent=t.footer;
   $("langZh").setAttribute("aria-pressed",lang==="zh"); $("langEn").setAttribute("aria-pressed",lang==="en");
-  renderChips(); updateAge(); if(book) renderPage();
+  renderChips(); updateAge(); if(book) render();
 }
 $("langZh").onclick=()=>{lang="zh";applyLang();};
 $("langEn").onclick=()=>{lang="en";applyLang();};
@@ -349,20 +373,17 @@ function chosenTheme(){
 }
 
 /* ============================================================
-   呼叫 Worker
+   呼叫后端
    ============================================================ */
 async function workerCall(payload){
   if(!WORKER_URL){ throw {noUrl:true}; }
   const res=await fetch(WORKER_URL,{
-    method:"POST",
-    headers:{"content-type":"application/json"},
-    body:JSON.stringify(payload)
+    method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(payload)
   });
   if(!res.ok){ throw new Error("Worker "+res.status+" "+(await res.text().catch(()=>""))); }
   return res.json();
 }
 
-/* 插图安全后缀（前端拼一次，Worker 也会再加一次，双重保险） */
 const IMG_SAFETY_SUFFIX = " Gentle soft cozy children's picture-book illustration, warm pastel colours, rounded friendly shapes. NO violence, NO weapons, NO fear/horror, NO scary monsters, NO real people or celebrities, no text in image.";
 
 /* ============================================================
@@ -374,13 +395,13 @@ async function generate(){
   if(!theme){ $("surpriseBtn").click(); return; }
   const age=+$("age").value, name=$("childName").value.trim(), t=I18N[lang];
 
+  exitReading();                 // 先恢复表格再覆盖状态（避免残留）
   setStatus(`<div class="status"><div class="spinner"></div>${t.writing}</div>`);
   stage.classList.remove("show"); $("generateBtn").disabled=true;
 
   try{
     const result=await workerCall({
-      action:"story", lang, age, name, theme,
-      pages:levelFor(age).pages, safety:SAFETY_RULES
+      action:"story", lang, age, name, theme, pages:levelFor(age).pages, safety:SAFETY_RULES
     });
     if(result && result.refused){ showRefused(); return; }
     if(!result || !Array.isArray(result.pages) || !result.pages.length) throw new Error("bad story");
@@ -395,7 +416,8 @@ async function generate(){
         img:undefined
       }))
     };
-    cur=0; setStatus(""); stage.classList.add("show"); renderPage();
+    buildViews(); cur=0;
+    setStatus(""); enterReading(); stage.classList.add("show"); render();
     stage.scrollIntoView({behavior:reduceMotion?"auto":"smooth",block:"start"});
     loadImages();
   }catch(err){
@@ -418,7 +440,11 @@ function showRefused(){
 }
 function setStatus(html){ statusArea.innerHTML=html; }
 
-/* 依序为每页要插图（Worker 回传 base64） */
+/* 生成后收起表格，把版面留给绘本；再做一本时恢复 */
+function enterReading(){ $("formCard").style.display="none"; document.querySelector("footer").style.display="none"; }
+function exitReading(){ $("formCard").style.display=""; document.querySelector("footer").style.display=""; }
+
+/* 依序为每页要插图（后端回传 base64） */
 async function loadImages(){
   for(let i=0;i<book.pages.length;i++){
     const p=book.pages[i];
@@ -432,65 +458,86 @@ async function loadImages(){
       });
       p.img = (r&&r.image) ? ("data:"+(r.mime||"image/png")+";base64,"+r.image) : null;
     }catch(e){ p.img=null; }
-    if((cur-1)===i || (cur===0&&i===0)) renderPage();
+    // 若这页正显示在当前跨页（含封面用第一页插图），刷新
+    if(!flipping && views[cur] && (views[cur].includes(i+1) || (cur===0 && i===0))) render();
   }
 }
 
 /* ============================================================
-   绘本渲染（spread 0 = 封面，spread k = 第 k 页）
+   绘本渲染 —— view 模型
+   单元 0 = 封面；单元 k = 第 k 页（book.pages[k-1]）
+   直式每个 view 一页；宽版页面成对（封面永远单独）
    ============================================================ */
-function totalSpreads(){ return book?book.pages.length+1:0; }
-
-function pageNodeHTML(spread){
-  const t=I18N[lang];
-  if(spread===0){
-    const p0=book.pages[0];
-    const by=$("childName").value.trim()? `${t.by} ${escapeHtml($("childName").value.trim())}` : t.byNoName;
-    return `<div class="page cover"><div class="art">${artHTML(p0)}</div>
-      <div class="cover-overlay"><h2>${escapeHtml(book.title)}</h2><div class="by">${by} 💖</div></div></div>`;
+function buildViews(){
+  twoUp = window.matchMedia("(min-width: 760px)").matches;
+  views=[[0]];
+  const N=book.pages.length, step=twoUp?2:1;
+  for(let i=1;i<=N;i+=step){
+    if(twoUp && i+1<=N) views.push([i,i+1]);
+    else views.push([i]);
   }
-  const i=spread-1, p=book.pages[i];
-  const pageLabel = lang==="zh" ? `${t.pageWord} ${i+1} 页 / ${book.pages.length}` : `${t.pageWord} ${i+1} / ${book.pages.length}`;
-  return `<div class="page"><div class="pageno">${pageLabel}</div>
-    <div class="pemoji" aria-hidden="true">${p.emoji}</div>
-    <div class="art">${artHTML(p)}</div>
-    <div class="text">${escapeHtml(p.text)}</div></div>`;
 }
+
 function artHTML(p){
   if(p.img){ return `<img src="${p.img}" alt="" />`; }
-  const loading=(p.img===undefined);
-  const t=I18N[lang];
+  const loading=(p.img===undefined), t=I18N[lang];
   return `<div class="emoji-fallback" aria-hidden="true">${p.emoji||"📖"}</div>
     ${loading?`<div class="img-loading"><span class="mini"></span>${t.drawing}</div>`:""}`;
 }
 
-function renderPage(){
+function pageHTML(unit){
+  const t=I18N[lang];
+  if(unit===0){
+    const p0=book.pages[0];
+    const by=$("childName").value.trim()? (t.by+" "+escapeHtml($("childName").value.trim())) : t.byNoName;
+    return `<div class="page cover"><div class="art">${artHTML(p0)}</div>
+      <div class="cover-overlay"><h2>${escapeHtml(book.title)}</h2><div class="by">${by} 💖</div></div></div>`;
+  }
+  const i=unit-1, p=book.pages[i];
+  const label = lang==="zh" ? `${t.pageWord} ${i+1} 页 / ${book.pages.length}` : `${t.pageWord} ${i+1} / ${book.pages.length}`;
+  return `<div class="page"><div class="pageno">${label}</div>
+    <div class="pemoji" aria-hidden="true">${p.emoji}</div>
+    <div class="art">${artHTML(p)}</div>
+    <div class="text">${escapeHtml(p.text)}</div></div>`;
+}
+
+function spreadHTML(vi){
+  const units=views[vi]||[0];
+  return `<div class="spread${units.length>1?' two':''}">${units.map(u=>pageHTML(u)).join("")}</div>`;
+}
+
+function clearBook(){ [...bookEl.querySelectorAll(".spread,.flipper")].forEach(n=>n.remove()); }
+
+function render(){
   if(!book) return;
-  [...bookEl.querySelectorAll(".page,.flipper")].forEach(n=>n.remove());
-  const node=document.createElement("div"); node.innerHTML=pageNodeHTML(cur);
+  flipping=false; clearBook();
+  bookEl.classList.toggle("wide", twoUp);
+  const node=document.createElement("div"); node.innerHTML=spreadHTML(cur);
   bookEl.insertBefore(node.firstElementChild,$("tapL"));
   renderDots();
-  $("prevBtn").disabled=cur===0; $("nextBtn").disabled=cur===totalSpreads()-1;
+  $("prevBtn").disabled=cur===0; $("nextBtn").disabled=cur===views.length-1;
+  $("endBar").hidden = !(cur===views.length-1);     // 最后一页才显示「再做一本」
   bookEl.setAttribute("aria-label", cur===0?I18N[lang].coverWord:(I18N[lang].pageWord+" "+cur));
   if(ttsOn) speakCurrent();
 }
+
 function renderDots(){
   const d=$("dots"); d.innerHTML="";
-  for(let s=0;s<totalSpreads();s++){
+  views.forEach((v,s)=>{
     const b=document.createElement("button"); b.className="dot"; b.setAttribute("role","tab");
     b.setAttribute("aria-current",s===cur);
-    b.setAttribute("aria-label",s===0?I18N[lang].coverWord:(I18N[lang].pageWord+" "+s));
+    b.setAttribute("aria-label", s===0?I18N[lang].coverWord:(I18N[lang].pageWord+" "+v.join("-")));
     b.onclick=()=>goTo(s); d.appendChild(b);
-  }
+  });
 }
 
-/* 翻页 + 3D 动画 */
+/* 翻页 + 干净的 3D 动画 */
 function goTo(target){
   if(!book||flipping) return;
-  target=Math.max(0,Math.min(totalSpreads()-1,target));
+  target=Math.max(0,Math.min(views.length-1,target));
   if(target===cur) return;
   const dir=target>cur?1:-1;
-  if(reduceMotion){ cur=target; renderPage(); return; }
+  if(reduceMotion){ cur=target; render(); return; }
   doFlip(target,dir);
 }
 function next(){ goTo(cur+1); }
@@ -498,26 +545,26 @@ function prev(){ goTo(cur-1); }
 
 function doFlip(target,dir){
   flipping=true; cancelSpeak();
-  const fromHTML=pageNodeHTML(cur), toHTML=pageNodeHTML(target);
-  const flip=document.createElement("div");
-  flip.className="flipper flipping";
-  flip.style.transformOrigin = dir>0?"left center":"right center";
-  flip.innerHTML=`<div class="face front"></div><div class="face back"></div>`;
-  const front=flip.querySelector(".front"), back=flip.querySelector(".back");
-  if(dir>0){ front.innerHTML=fromHTML; back.innerHTML=toHTML; flip.style.transform="rotateY(0deg)"; }
-  else{ front.innerHTML=toHTML; back.innerHTML=fromHTML; flip.style.transform="rotateY(-180deg)"; }
-  flip.style.transition="transform .62s cubic-bezier(.4,.05,.3,1)";
-  [...bookEl.querySelectorAll(".page")].forEach(n=>n.remove());
-  const base=document.createElement("div"); base.innerHTML=toHTML;
+  clearBook();
+  bookEl.classList.toggle("wide", twoUp);
+  // 底层先放好目标跨页，翻页时透出来
+  const base=document.createElement("div"); base.innerHTML=spreadHTML(target);
   bookEl.insertBefore(base.firstElementChild,$("tapL"));
+  // 翻转层：正面=当前页，背面=目标页，绕中轴翻
+  const flip=document.createElement("div");
+  flip.className="flipper";
+  flip.innerHTML=`<div class="face front"></div><div class="face back"></div>`;
+  flip.querySelector(".front").innerHTML=spreadHTML(cur);
+  flip.querySelector(".back").innerHTML=spreadHTML(target);
   bookEl.insertBefore(flip,$("tapL"));
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    flip.style.transform = dir>0?"rotateY(-180deg)":"rotateY(0deg)";
-  }));
-  flip.addEventListener("transitionend",function done(){
-    flip.removeEventListener("transitionend",done);
-    flip.remove(); cur=target; flipping=false; renderPage();
-  });
+  const endDeg = dir>0 ? -180 : 180;
+  flip.style.transform="rotateY(0deg)";
+  flip.style.transition="transform .6s cubic-bezier(.45,.05,.25,1)";
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ flip.style.transform=`rotateY(${endDeg}deg)`; }));
+  let done=false;
+  const finish=()=>{ if(done) return; done=true; cur=target; render(); };
+  flip.addEventListener("transitionend",e=>{ if(e.propertyName==="transform") finish(); });
+  setTimeout(finish, 750); // 保险：动画结束后定格新页
 }
 $("nextBtn").onclick=next; $("prevBtn").onclick=prev; $("tapL").onclick=prev; $("tapR").onclick=next;
 
@@ -539,16 +586,34 @@ bookEl.addEventListener("touchend",e=>{
   touchX=touchY=null;
 });
 
-$("newBookBtn").onclick=()=>{ cancelSpeak(); book=null; stage.classList.remove("show"); setStatus("");
-  $("formCard").scrollIntoView({behavior:reduceMotion?"auto":"smooth"}); };
+/* 视窗变化：在单页/双页之间切换并保持当前位置 */
+let resizeTimer=null;
+window.addEventListener("resize",()=>{
+  if(!book) return;
+  clearTimeout(resizeTimer);
+  resizeTimer=setTimeout(()=>{
+    const firstUnit = (views[cur]&&views[cur][0]) || 0;
+    const wasTwo=twoUp; buildViews();
+    if(wasTwo===twoUp) return;          // 模式没变就不重排
+    cur=Math.max(0, views.findIndex(v=>v.includes(firstUnit)));
+    render();
+  },200);
+});
 
+/* 再做一本：恢复表格、收起绘本 */
+$("againBtn").onclick=()=>{
+  cancelSpeak(); ttsOn=false; $("ttsBtn").setAttribute("aria-pressed",false);
+  book=null; stage.classList.remove("show"); setStatus(""); exitReading();
+  $("formCard").scrollIntoView({behavior:reduceMotion?"auto":"smooth"});
+};
+
+/* ---------- 朗读模式 / 语音 ---------- */
 $("readAloudBtn").onclick=()=>{ const on=document.body.classList.toggle("read-aloud"); $("readAloudBtn").setAttribute("aria-pressed",on); };
-
 $("ttsBtn").onclick=()=>{ ttsOn=!ttsOn; $("ttsBtn").setAttribute("aria-pressed",ttsOn); if(ttsOn) speakCurrent(); else cancelSpeak(); };
 function speakCurrent(){
   if(!("speechSynthesis"in window)||!book) return;
   cancelSpeak();
-  const text = cur===0 ? book.title : book.pages[cur-1].text;
+  const text = cur===0 ? book.title : views[cur].map(u=>book.pages[u-1].text).join(" ");
   if(!text) return;
   const u=new SpeechSynthesisUtterance(text);
   u.lang = lang==="zh"?"zh-CN":"en-US"; u.rate=0.92; u.pitch=1.05;
@@ -557,6 +622,74 @@ function speakCurrent(){
   speechSynthesis.speak(u);
 }
 function cancelSpeak(){ if("speechSynthesis"in window) speechSynthesis.cancel(); }
+
+/* ============================================================
+   储存绘本到离线档（自带阅读器的单一 HTML，可离线开启）
+   ============================================================ */
+$("saveBtn").onclick=saveBook;
+function saveBook(){
+  if(!book) return;
+  const t=I18N[lang];
+  const data={
+    title: book.title,
+    by: ($("childName").value.trim()? (t.by+" "+$("childName").value.trim()) : t.byNoName)+" 💖",
+    cover: t.coverWord,
+    ttsLang: lang==="zh"?"zh-CN":"en-US",
+    pages: book.pages.map(p=>({ text:p.text, emoji:p.emoji, img:p.img||null }))
+  };
+  const html=offlineHTML(data, lang);
+  const blob=new Blob([html],{type:"text/html"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url; a.download=(book.title||"StoryBuddy").replace(/[\\/:*?"<>|]/g,"_")+".html";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),5000);
+  const sp=$("saveTxt"), old=sp.textContent; sp.textContent=t.saved; setTimeout(()=>{sp.textContent=old;},2000);
+}
+
+function offlineHTML(data, lng){
+  const json = JSON.stringify(data).replace(/</g,"\\u003c");
+  const css =
+   "*{box-sizing:border-box}body{margin:0;font-family:ui-rounded,'Yuanti SC','Hannotate SC','PingFang SC','Microsoft YaHei',system-ui,sans-serif;"
+   +"background:linear-gradient(180deg,#fff6ec,#fff);color:#4a3b2f;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:18px}"
+   +".book{position:relative;width:min(460px,94vw);aspect-ratio:3/4;background:#fffaf3;border-radius:20px;overflow:hidden;"
+   +"box-shadow:0 10px 30px rgba(120,80,40,.18);border:1px solid #f0e2cf}"
+   +".pg{position:absolute;inset:0;display:flex;flex-direction:column;animation:fd .4s ease}@keyframes fd{from{opacity:0}to{opacity:1}}"
+   +".art{position:relative;flex:1;background:linear-gradient(135deg,#ffe9d6,#f0e6ff);display:grid;place-items:center;overflow:hidden}"
+   +".art img{width:100%;height:100%;object-fit:cover}.emoji{font-size:84px}"
+   +".tx{flex:0 0 auto;max-height:44%;overflow:auto;padding:16px 20px;font-size:19px;font-weight:600;border-top:1px solid #f0e2cf}"
+   +".no{position:absolute;top:10px;left:12px;background:rgba(255,255,255,.85);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:800;color:#7a6a59;z-index:2}"
+   +".cover .ov{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:24px;background:linear-gradient(transparent,rgba(40,20,10,.55));color:#fff}"
+   +".cover h2{margin:0 0 6px;font-size:30px;text-shadow:0 3px 12px rgba(0,0,0,.4)}.cover .by{font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.5)}"
+   +".nav{display:flex;gap:14px;align-items:center;margin-top:16px}"
+   +".nav button{width:52px;height:52px;border-radius:50%;border:0;background:#fff;box-shadow:0 6px 16px rgba(120,80,40,.18);font-size:22px;color:#e8693a;font-weight:900;cursor:pointer}"
+   +".ct{font-weight:800;color:#7a6a59;min-width:74px;text-align:center}";
+  // 离线阅读器：纯字串、不使用模板字面量，避免与外层冲突
+  const reader =
+   "var D=JSON.parse(document.getElementById('data').textContent);var i=0;var app=document.getElementById('app');"
+   +"function esc(s){return (s||'').replace(/[&<>\"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c];});}"
+   +"function art(p){return p.img?('<img src=\"'+p.img+'\" alt=\"\">'):('<div class=\"emoji\">'+(p.emoji||'📖')+'</div>');}"
+   +"function pg(idx){if(idx===0){return '<div class=\"pg cover\"><div class=\"art\">'+art(D.pages[0])+'</div><div class=\"ov\"><h2>'+esc(D.title)+'</h2><div class=\"by\">'+esc(D.by)+'</div></div></div>';}"
+   +"var p=D.pages[idx-1];return '<div class=\"pg\"><div class=\"no\">'+idx+' / '+D.pages.length+'</div><div class=\"art\">'+art(p)+'</div><div class=\"tx\">'+esc(p.text)+'</div></div>';}"
+   +"function render(){app.innerHTML='<div class=\"book\">'+pg(i)+'</div><div class=\"nav\"><button id=\"pp\">‹</button><span class=\"ct\">'+(i===0?D.cover:(i+' / '+D.pages.length))+'</span><button id=\"nn\">›</button><button id=\"ss\">🔊</button></div>';"
+   +"document.getElementById('pp').onclick=prev;document.getElementById('nn').onclick=next;document.getElementById('ss').onclick=say;}"
+   +"function prev(){if(i>0){i--;render();}}function next(){if(i<D.pages.length){i++;render();}}"
+   +"function say(){try{speechSynthesis.cancel();var t=i===0?D.title:D.pages[i-1].text;var u=new SpeechSynthesisUtterance(t);u.lang=D.ttsLang;u.rate=0.92;speechSynthesis.speak(u);}catch(e){}}"
+   +"document.addEventListener('keydown',function(e){if(e.key==='ArrowRight')next();else if(e.key==='ArrowLeft')prev();});"
+   +"var sx=null;document.addEventListener('touchstart',function(e){sx=e.touches[0].clientX;},{passive:true});"
+   +"document.addEventListener('touchend',function(e){if(sx==null)return;var dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>50){dx<0?next():prev();}sx=null;});render();";
+  return [
+    "<!doctype html>",
+    '<html lang="'+(lng==="zh"?"zh":"en")+'"><head><meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">',
+    "<title>"+escapeHtml(data.title)+"</title>",
+    "<style>"+css+"</style></head><body>",
+    '<div id="app"></div>',
+    '<script id="data" type="application/json">'+json+'<\/script>',
+    "<script>"+reader+"<\/script>",
+    "</body></html>"
+  ].join("\n");
+}
 
 function escapeHtml(s){return (s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 

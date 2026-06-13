@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>StoryBuddy · 故事伙伴</title>
+<script>
+/* ============================================================
+   后端端点：Cloudflare Pages Functions，与前端同网域。
+   对应档案 functions/api/generate.js（无需填完整网址）。
+   ============================================================ */
+const WORKER_URL = "/api/generate";
+/* ============================================================ */
+</script>
+<style>
+  :root{
+    --bg1:#fff6ec; --bg2:#ffe9d6; --bg3:#f6e7ff;
+    --paper:#fffaf3; --paper-edge:#f0e2cf;
+    --ink:#4a3b2f; --ink-soft:#7a6a59;
+    --accent:#ff8a5b; --accent-deep:#e8693a;
+    --accent2:#7c6cf0; --accent2-deep:#5a49d6;
+    --chip:#fff; --chip-on:#ffd9c2;
+    --shadow:0 10px 30px rgba(120,80,40,.18);
+    --radius:22px;
+    --font: ui-rounded, "Quicksand", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:var(--font); color:var(--ink);
+    background:
+      radial-gradient(1200px 600px at 10% -10%, var(--bg3), transparent 60%),
+      radial-gradient(1000px 700px at 110% 0%, var(--bg2), transparent 55%),
+      linear-gradient(180deg, var(--bg1), #fff);
+    min-height:100vh; -webkit-font-smoothing:antialiased; line-height:1.5;
+  }
+  .wrap{max-width:980px;margin:0 auto;padding:18px 18px 60px}
+
+  header.app{display:flex;align-items:center;gap:12px;padding:10px 4px 18px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:12px;flex:1 1 auto;min-width:0}
+  .logo{width:52px;height:52px;border-radius:16px;flex:0 0 auto;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    display:grid;place-items:center;font-size:28px;box-shadow:var(--shadow)}
+  .brand h1{font-size:clamp(22px,5vw,30px);margin:0;line-height:1.1}
+  .brand p{margin:0;color:var(--ink-soft);font-size:13px}
+  .lang-switch{display:inline-flex;background:#fff;border-radius:999px;padding:4px;box-shadow:var(--shadow);gap:2px}
+  .lang-switch button{border:0;background:transparent;color:var(--ink-soft);padding:8px 14px;border-radius:999px;
+    font-family:inherit;font-weight:700;cursor:pointer;font-size:14px;transition:.2s}
+  .lang-switch button[aria-pressed="true"]{background:linear-gradient(135deg,var(--accent),var(--accent-deep));
+    color:#fff;box-shadow:0 4px 12px rgba(232,105,58,.4)}
+
+  .card{background:rgba(255,255,255,.72);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.7);
+    border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);margin-bottom:18px}
+  .field{margin-bottom:20px}.field:last-child{margin-bottom:0}
+  label.lbl{display:block;font-weight:800;margin-bottom:8px;font-size:16px}
+  .hint{color:var(--ink-soft);font-size:13px;font-weight:600}
+
+  .age-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .age-badge{min-width:74px;text-align:center;background:linear-gradient(135deg,var(--accent2),var(--accent2-deep));
+    color:#fff;border-radius:16px;padding:8px 10px;box-shadow:0 6px 16px rgba(90,73,214,.35)}
+  .age-badge b{font-size:26px;display:block;line-height:1}.age-badge span{font-size:11px;opacity:.9}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:14px;border-radius:999px;flex:1 1 200px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));outline-offset:4px}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;border-radius:50%;
+    background:#fff;border:4px solid var(--accent-deep);cursor:pointer;box-shadow:0 3px 8px rgba(0,0,0,.25)}
+  input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#fff;border:4px solid var(--accent-deep);cursor:pointer}
+  .level-pill{display:inline-block;margin-top:10px;background:var(--chip-on);color:var(--accent-deep);
+    font-weight:800;padding:6px 14px;border-radius:999px;font-size:13px}
+
+  input[type=text]{width:100%;padding:14px 16px;border-radius:14px;border:2px solid var(--paper-edge);
+    background:#fff;font-family:inherit;font-size:16px;color:var(--ink)}
+  input[type=text]:focus{outline:3px solid var(--accent);border-color:transparent}
+
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+  .chip{border:2px solid var(--paper-edge);background:var(--chip);color:var(--ink);padding:10px 16px;border-radius:999px;
+    cursor:pointer;font-family:inherit;font-weight:700;font-size:14px;transition:.15s;display:inline-flex;align-items:center;gap:7px}
+  .chip:hover{transform:translateY(-2px)}
+  .chip[aria-pressed="true"]{background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#fff;border-color:transparent;
+    box-shadow:0 6px 14px rgba(232,105,58,.4)}
+  .surprise{border:0;background:linear-gradient(135deg,#ffd36b,#ff9b3d);color:#5a3a12;font-weight:800;padding:11px 18px;
+    border-radius:999px;cursor:pointer;font-family:inherit;font-size:14px;box-shadow:0 6px 16px rgba(255,155,61,.45)}
+  .row-split{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .row-split input[type=text]{flex:1 1 220px}
+
+  .privacy{display:flex;align-items:center;gap:8px;color:var(--ink-soft);font-size:13px;font-weight:600;margin-top:10px}
+  .generate{width:100%;border:0;cursor:pointer;font-family:inherit;font-weight:800;font-size:20px;color:#fff;padding:18px;
+    border-radius:18px;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 12px 28px rgba(124,108,240,.4);transition:.15s}
+  .generate:hover{transform:translateY(-2px)}.generate:disabled{opacity:.6;cursor:wait;transform:none}
+
+  .status{text-align:center;padding:30px 18px;color:var(--ink-soft);font-weight:700}
+  .spinner{width:46px;height:46px;border-radius:50%;margin:0 auto 14px;border:5px solid var(--chip-on);
+    border-top-color:var(--accent-deep);animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .friendly{background:#fff3e8;border:2px solid #ffd9c2;border-radius:18px;padding:24px;text-align:center}
+  .friendly .big{font-size:46px;margin-bottom:8px}.friendly h3{margin:.2em 0;color:var(--accent-deep)}.friendly button{margin-top:14px}
+
+  #stage{display:none}#stage.show{display:block}
+  .book-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  .book-bar .left{display:flex;gap:8px;align-items:center}
+  .btn{border:0;background:#fff;color:var(--ink);padding:11px 16px;border-radius:14px;cursor:pointer;font-family:inherit;
+    font-weight:800;font-size:14px;box-shadow:var(--shadow);display:inline-flex;gap:7px;align-items:center}
+  .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#fff}
+  .btn.toggle[aria-pressed="true"]{background:linear-gradient(135deg,var(--accent2),var(--accent2-deep));color:#fff}
+
+  .book-scene{perspective:2200px;display:grid;place-items:center}
+  .book{position:relative;width:min(560px,94vw);aspect-ratio:4/5;border-radius:18px;transform-style:preserve-3d}
+  @media(min-width:760px){.book{width:560px;aspect-ratio:5/6}}
+  .page{position:absolute;inset:0;border-radius:18px;overflow:hidden;background:var(--paper);box-shadow:var(--shadow);
+    display:flex;flex-direction:column;backface-visibility:hidden;border:1px solid var(--paper-edge)}
+  .page .art{position:relative;flex:1 1 auto;min-height:0;background:linear-gradient(135deg,#ffe9d6,#f0e6ff);
+    display:grid;place-items:center;overflow:hidden}
+  .page .art img{width:100%;height:100%;object-fit:cover;display:block;animation:fade .6s ease}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .page .art .emoji-fallback{font-size:84px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.15))}
+  .img-loading{position:absolute;bottom:10px;right:10px;background:rgba(255,255,255,.85);border-radius:999px;padding:5px 12px;
+    font-size:12px;font-weight:700;color:var(--ink-soft);display:flex;align-items:center;gap:7px}
+  .img-loading .mini{width:14px;height:14px;border-radius:50%;border:3px solid var(--chip-on);border-top-color:var(--accent-deep);animation:spin .9s linear infinite}
+  .page .text{flex:0 0 auto;padding:18px 22px 22px;background:var(--paper);font-size:clamp(17px,4.4vw,21px);font-weight:600;
+    color:var(--ink);border-top:1px solid var(--paper-edge);max-height:46%;overflow:auto}
+  .page .pageno{position:absolute;top:12px;left:14px;background:rgba(255,255,255,.85);border-radius:999px;padding:3px 12px;
+    font-size:12px;font-weight:800;color:var(--ink-soft)}
+  .page .pemoji{position:absolute;top:10px;right:14px;font-size:26px}
+  .page.cover .art{background:linear-gradient(150deg,#ffcaa6,#c9b6ff)}
+  .page.cover .cover-overlay{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:26px;
+    background:linear-gradient(transparent,rgba(40,20,10,.55));color:#fff}
+  .page.cover h2{font-size:clamp(26px,7vw,40px);margin:0 0 6px;text-shadow:0 3px 12px rgba(0,0,0,.4)}
+  .page.cover .by{font-weight:700;opacity:.95;text-shadow:0 2px 8px rgba(0,0,0,.5)}
+
+  .tap{position:absolute;top:0;bottom:0;width:34%;z-index:5;cursor:pointer;border:0;background:transparent}
+  .tap.l{left:0}.tap.r{right:0}
+  .tap:focus-visible{outline:3px solid var(--accent2);outline-offset:-6px;border-radius:18px}
+  .flipper{position:absolute;inset:0;border-radius:18px;transform-style:preserve-3d;z-index:20;pointer-events:none;transform-origin:left center}
+  .flipper .face{position:absolute;inset:0;backface-visibility:hidden;border-radius:18px;overflow:hidden}
+  .flipper .back{transform:rotateY(180deg)}
+  .flipping{box-shadow:-20px 0 40px rgba(0,0,0,.2)}
+
+  .nav{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:16px}
+  .nav button{width:56px;height:56px;border-radius:50%;border:0;cursor:pointer;font-size:22px;background:#fff;
+    box-shadow:var(--shadow);color:var(--accent-deep);font-weight:900}
+  .nav button:disabled{opacity:.35;cursor:default}
+  .dots{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:60%}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--paper-edge);cursor:pointer;border:0}
+  .dot[aria-current="true"]{background:var(--accent-deep);transform:scale(1.4)}
+
+  body.read-aloud .page .text{font-size:clamp(22px,6vw,30px);font-weight:800;color:#1f1710;background:#fff;line-height:1.55;max-height:60%}
+  body.read-aloud .page .art{background:#000}
+
+  :focus-visible{outline:3px solid var(--accent2);outline-offset:2px}
+  @media (prefers-reduced-motion: reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important}}
+  footer{text-align:center;color:var(--ink-soft);font-size:12px;margin-top:30px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="app">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">📖✨</div>
+      <div>
+        <h1 id="appTitle">故事伙伴</h1>
+        <p id="appTagline">几秒钟生成专属睡前绘本</p>
+      </div>
+    </div>
+    <div class="lang-switch" role="group" aria-label="Language">
+      <button id="langZh" aria-pressed="true">中文</button>
+      <button id="langEn" aria-pressed="false">English</button>
+    </div>
+  </header>
+
+  <section class="card" id="formCard">
+    <div class="field">
+      <label class="lbl" id="ageLabel" for="age">孩子的年龄</label>
+      <div class="age-row">
+        <div class="age-badge"><b id="ageVal">5</b><span id="ageYears">岁</span></div>
+        <input type="range" id="age" min="1" max="12" value="5" step="1" aria-describedby="levelPill" />
+      </div>
+      <div class="level-pill" id="levelPill"></div>
+    </div>
+
+    <div class="field">
+      <label class="lbl" id="nameLabel" for="childName">孩子的名字 <span class="hint" id="optional">（可选）</span></label>
+      <input type="text" id="childName" maxlength="24" autocomplete="off" placeholder="例如 小米" />
+    </div>
+
+    <div class="field">
+      <label class="lbl" id="themeLabel">故事主题</label>
+      <div class="chips" id="chips" role="group" aria-label="主题"></div>
+      <div class="row-split">
+        <input type="text" id="customTheme" maxlength="60" placeholder="或自己输入主题…" autocomplete="off" />
+        <button class="surprise" id="surpriseBtn">🎁 <span id="surpriseTxt">盲盒手气</span></button>
+      </div>
+    </div>
+
+    <div class="field">
+      <button class="generate" id="generateBtn">✨ <span id="genTxt">生成我们的绘本</span></button>
+      <div class="privacy">🔒 <span id="privacyTxt">我们不会储存您孩子的任何资料，一切只在本次使用中。</span></div>
+    </div>
+  </section>
+
+  <section id="statusArea"></section>
+
+  <section id="stage">
+    <div class="book-bar">
+      <div class="left">
+        <button class="btn" id="newBookBtn">↩︎ <span id="newBookTxt">新故事</span></button>
+      </div>
+      <div class="left">
+        <button class="btn toggle" id="readAloudBtn" aria-pressed="false">🔆 <span id="readAloudTxt">朗读模式</span></button>
+        <button class="btn toggle" id="ttsBtn" aria-pressed="false">🔊 <span id="ttsTxt">语音朗读</span></button>
+      </div>
+    </div>
+    <div class="book-scene">
+      <div class="book" id="book" tabindex="0" aria-roledescription="storybook" aria-label="绘本">
+        <button class="tap l" id="tapL" aria-label="上一页"></button>
+        <button class="tap r" id="tapR" aria-label="下一页"></button>
+      </div>
+    </div>
+    <div class="nav">
+      <button id="prevBtn" aria-label="上一页">‹</button>
+      <div class="dots" id="dots" role="tablist" aria-label="页面"></div>
+      <button id="nextBtn" aria-label="下一页">›</button>
+    </div>
+  </section>
+
+  <footer><span id="footerTxt">用心为小小梦想家打造 · 家长永远是最终把关人。</span></footer>
+</div>
+
+<script>
+/* ============================================================
+   StoryBuddy 前端 — 透过 Cloudflare Worker 呼叫 Gemini
+   ============================================================ */
+
+/* ---------- 儿童安全规则（前端亦内建一份） ---------- */
+const SAFETY_RULES = `儿童安全（1-12岁）硬性规则，不可妥协：禁止暴力、恐怖、性、爱情，以及任何孩子可能模仿的危险行为（火、火柴、药物、武器、跟陌生人走、爬高处、玩水）。
+不得描绘或指名真实在世名人；若主题涉及名人，改用一般化的正面角色（例如「一位善良的科学家」）。
+若涉及国家/文化，只聚焦美食、风景、节庆与善意，不要刻板印象与政治。
+插图也必须遵守同样安全规则：柔和温暖、绝无暴力/武器/恐怖/真实名人。`;
+
+/* ---------- i18n ---------- */
+const I18N = {
+  zh:{
+    title:"故事伙伴", tagline:"几秒钟生成专属睡前绘本",
+    ageLabel:"孩子的年龄", years:"岁", nameLabel:"孩子的名字", optional:"（可选）", namePh:"例如 小米",
+    themeLabel:"故事主题", custom:"或自己输入主题…", surprise:"盲盒手气",
+    gen:"生成我们的绘本", privacy:"我们不会储存您孩子的任何资料，一切只在本次使用中。",
+    newBook:"新故事", readAloud:"朗读模式", tts:"语音朗读",
+    footer:"用心为小小梦想家打造 · 家长永远是最终把关人。",
+    levels:["小小故事 · 非常简单","初级故事 · 温柔的情绪","小小冒险 · 一点小挑战","更长的旅程 · 有思考的主题"],
+    writing:"正在为你写一个故事…", drawing:"正在画出美丽的插画",
+    error:"生成故事时出了点小问题，请再试一次。",
+    noUrl:"还没设定 Worker 网址。请打开 index.html，在最上方把 WORKER_URL 填成你的 Cloudflare Worker 网址。",
+    refusedH:"换一个主题试试吧",
+    refusedP:"这个主题不太适合做成孩子的睡前故事。要不要试试温馨的主题，比如善良、小动物或海洋？",
+    tryAgain:"换个主题",
+    by:"专属故事送给", byNoName:"睡前小故事", pageWord:"第", pagesUnit:" 页", coverWord:"封面",
+    themes:{kindness:"善良",bravery:"勇敢",honesty:"诚实",sharing:"分享",feelings:"情绪",words:"新词语",animals:"动物",space:"太空",ocean:"海洋",colors:"颜色"}
+  },
+  en:{
+    title:"StoryBuddy", tagline:"Personalized bedtime storybooks in seconds",
+    ageLabel:"Child's age", years:"years old", nameLabel:"Child's name", optional:"(optional)", namePh:"e.g. Mia",
+    themeLabel:"Story theme", custom:"Or type your own…", surprise:"Surprise Me",
+    gen:"Create our storybook", privacy:"We don't save any of your child's information. Everything stays in this session.",
+    newBook:"New story", readAloud:"Read-aloud", tts:"Narrate",
+    footer:"Made with care for little dreamers · Parents are always the final reviewers.",
+    levels:["Tiny tales · very simple","First stories · gentle feelings","Little adventures · a small challenge","Bigger journeys · a thoughtful theme"],
+    writing:"Writing a story just for you…", drawing:"Bringing the pictures to life",
+    error:"Something went wrong while creating the story. Please try again.",
+    noUrl:"Worker URL not set yet. Open index.html and set WORKER_URL at the top to your Cloudflare Worker URL.",
+    refusedH:"Let's try another theme",
+    refusedP:"That idea isn't quite right for a children's bedtime story. How about something cozy like kindness, animals, or the ocean?",
+    tryAgain:"Try another theme",
+    by:"A story for", byNoName:"A bedtime story", pageWord:"Page", pagesUnit:" pages", coverWord:"Cover",
+    themes:{kindness:"Kindness",bravery:"Bravery",honesty:"Honesty",sharing:"Sharing",feelings:"Feelings",words:"New words",animals:"Animals",space:"Space",ocean:"Ocean",colors:"Colors"}
+  }
+};
+const THEME_KEYS=["kindness","bravery","honesty","sharing","feelings","words","animals","space","ocean","colors"];
+const THEME_EMOJI={kindness:"💗",bravery:"🦁",honesty:"🌟",sharing:"🤝",feelings:"🌈",words:"📚",animals:"🐾",space:"🚀",ocean:"🌊",colors:"🎨"};
+
+/* 盲盒题库（中英文各一组，皆儿童安全） */
+const SURPRISE_POOL={
+  zh:["一朵爱睡觉的小云朵学会分享雨水","一只勇敢的小蜗牛穿过友善的花园","一只熊猫发现了新的颜色","一个善良的机器人给花浇水",
+      "两只小企鹅学会轮流玩","一颗好奇的小星星拜访海洋","一条温柔的小龙和蝴蝶做朋友","一只走丢的小手套找到回家的路",
+      "小狐狸和小兔子成为好朋友","一只小乌龟喜欢数贝壳","一缕月光帮萤火虫找到方向","一只小熊说了对不起，心里变得轻松"],
+  en:["a sleepy little cloud who learns to share rain","a brave snail crossing a friendly garden","a panda who discovers new colors",
+      "a kind robot who waters flowers","two penguins learning to take turns","a curious star who visits the ocean",
+      "a tiny dragon who is gentle with butterflies","a lost mitten finding its way home","a fox and a rabbit becoming friends",
+      "a turtle who loves counting seashells","a moonbeam helping fireflies find their way","a bear cub who says sorry and feels better"]
+};
+
+function levelFor(age){
+  if(age<=3) return {idx:0,pages:5};
+  if(age<=6) return {idx:1,pages:7};
+  if(age<=9) return {idx:2,pages:9};
+  return {idx:3,pages:11};
+}
+
+/* ---------- 状态 ---------- */
+let lang="zh", selectedTheme="", book=null, cur=0, flipping=false, ttsOn=false;
+const reduceMotion=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $=id=>document.getElementById(id);
+const statusArea=$("statusArea"), stage=$("stage"), bookEl=$("book");
+
+/* ---------- 语言 ---------- */
+function applyLang(){
+  const t=I18N[lang];
+  document.documentElement.lang = lang==="zh"?"zh":"en";
+  $("appTitle").textContent=t.title; $("appTagline").textContent=t.tagline;
+  $("ageLabel").textContent=t.ageLabel; $("ageYears").textContent=t.years;
+  $("nameLabel").firstChild.textContent=t.nameLabel+" "; $("optional").textContent=t.optional;
+  $("childName").placeholder=t.namePh;
+  $("themeLabel").textContent=t.themeLabel; $("customTheme").placeholder=t.custom; $("surpriseTxt").textContent=t.surprise;
+  $("genTxt").textContent=t.gen; $("privacyTxt").textContent=t.privacy;
+  $("newBookTxt").textContent=t.newBook; $("readAloudTxt").textContent=t.readAloud; $("ttsTxt").textContent=t.tts;
+  $("footerTxt").textContent=t.footer;
+  $("langZh").setAttribute("aria-pressed",lang==="zh"); $("langEn").setAttribute("aria-pressed",lang==="en");
+  renderChips(); updateAge(); if(book) renderPage();
+}
+$("langZh").onclick=()=>{lang="zh";applyLang();};
+$("langEn").onclick=()=>{lang="en";applyLang();};
+
+function renderChips(){
+  const t=I18N[lang], c=$("chips"); c.innerHTML="";
+  THEME_KEYS.forEach(k=>{
+    const b=document.createElement("button"); b.className="chip"; b.type="button";
+    b.setAttribute("aria-pressed",selectedTheme===k);
+    b.innerHTML=`<span aria-hidden="true">${THEME_EMOJI[k]}</span> ${t.themes[k]}`;
+    b.onclick=()=>{ selectedTheme=(selectedTheme===k)?"":k; $("customTheme").value=""; renderChips(); };
+    c.appendChild(b);
+  });
+}
+$("customTheme").addEventListener("input",()=>{ if($("customTheme").value.trim()){selectedTheme="";renderChips();} });
+
+function updateAge(){
+  const age=+$("age").value, lv=levelFor(age);
+  $("ageVal").textContent=age;
+  $("levelPill").textContent=I18N[lang].levels[lv.idx]+" · ~"+lv.pages+I18N[lang].pagesUnit;
+}
+$("age").addEventListener("input",updateAge);
+
+$("surpriseBtn").onclick=()=>{
+  const pool=SURPRISE_POOL[lang], pick=pool[Math.floor(Math.random()*pool.length)];
+  selectedTheme=""; renderChips(); $("customTheme").value=pick; $("customTheme").focus();
+};
+
+function chosenTheme(){
+  const custom=$("customTheme").value.trim();
+  if(custom) return custom;
+  if(selectedTheme) return I18N.en.themes[selectedTheme]; // 主题以英文键传给后端，语言由 lang 控制
+  return null;
+}
+
+/* ============================================================
+   呼叫 Worker
+   ============================================================ */
+async function workerCall(payload){
+  if(!WORKER_URL){ throw {noUrl:true}; }
+  const res=await fetch(WORKER_URL,{
+    method:"POST",
+    headers:{"content-type":"application/json"},
+    body:JSON.stringify(payload)
+  });
+  if(!res.ok){ throw new Error("Worker "+res.status+" "+(await res.text().catch(()=>""))); }
+  return res.json();
+}
+
+/* 插图安全后缀（前端拼一次，Worker 也会再加一次，双重保险） */
+const IMG_SAFETY_SUFFIX = " Gentle soft cozy children's picture-book illustration, warm pastel colours, rounded friendly shapes. NO violence, NO weapons, NO fear/horror, NO scary monsters, NO real people or celebrities, no text in image.";
+
+/* ============================================================
+   生成流程
+   ============================================================ */
+$("generateBtn").onclick=generate;
+async function generate(){
+  const theme=chosenTheme();
+  if(!theme){ $("surpriseBtn").click(); return; }
+  const age=+$("age").value, name=$("childName").value.trim(), t=I18N[lang];
+
+  setStatus(`<div class="status"><div class="spinner"></div>${t.writing}</div>`);
+  stage.classList.remove("show"); $("generateBtn").disabled=true;
+
+  try{
+    const result=await workerCall({
+      action:"story", lang, age, name, theme,
+      pages:levelFor(age).pages, safety:SAFETY_RULES
+    });
+    if(result && result.refused){ showRefused(); return; }
+    if(!result || !Array.isArray(result.pages) || !result.pages.length) throw new Error("bad story");
+
+    book={
+      title:(result.title||(lang==="zh"?"我们的故事":"Our Story")).toString(),
+      pages:result.pages.map(p=>({
+        text:(p.text||"").toString(),
+        emoji:((p.emoji||"📖").toString().trim())||"📖",
+        imagePrompt:(p.imagePrompt||"").toString(),
+        characterSheet:(p.characterSheet||"").toString(),
+        img:undefined
+      }))
+    };
+    cur=0; setStatus(""); stage.classList.add("show"); renderPage();
+    stage.scrollIntoView({behavior:reduceMotion?"auto":"smooth",block:"start"});
+    loadImages();
+  }catch(err){
+    if(err&&err.noUrl){
+      setStatus(`<div class="friendly"><div class="big">🔧</div><p>${t.noUrl}</p></div>`);
+    }else{
+      console.error(err);
+      setStatus(`<div class="friendly"><div class="big">🌧️</div><p>${t.error}</p>
+        <button class="btn primary" id="retry">${t.tryAgain}</button></div>`);
+      $("retry").onclick=()=>setStatus("");
+    }
+  }finally{ $("generateBtn").disabled=false; }
+}
+
+function showRefused(){
+  const t=I18N[lang];
+  setStatus(`<div class="friendly"><div class="big">🌸</div><h3>${t.refusedH}</h3><p>${t.refusedP}</p>
+    <button class="btn primary" id="tryAnother">${t.tryAgain}</button></div>`);
+  $("tryAnother").onclick=()=>{ setStatus(""); $("customTheme").value=""; $("customTheme").focus(); };
+}
+function setStatus(html){ statusArea.innerHTML=html; }
+
+/* 依序为每页要插图（Worker 回传 base64） */
+async function loadImages(){
+  for(let i=0;i<book.pages.length;i++){
+    const p=book.pages[i];
+    if(p.img!==undefined) continue;
+    try{
+      const r=await workerCall({
+        action:"image",
+        characterSheet:p.characterSheet,
+        imagePrompt:p.imagePrompt + IMG_SAFETY_SUFFIX,
+        safety:SAFETY_RULES
+      });
+      p.img = (r&&r.image) ? ("data:image/png;base64,"+r.image) : null;
+    }catch(e){ p.img=null; }
+    if((cur-1)===i || (cur===0&&i===0)) renderPage();
+  }
+}
+
+/* ============================================================
+   绘本渲染（spread 0 = 封面，spread k = 第 k 页）
+   ============================================================ */
+function totalSpreads(){ return book?book.pages.length+1:0; }
+
+function pageNodeHTML(spread){
+  const t=I18N[lang];
+  if(spread===0){
+    const p0=book.pages[0];
+    const by=$("childName").value.trim()? `${t.by} ${escapeHtml($("childName").value.trim())}` : t.byNoName;
+    return `<div class="page cover"><div class="art">${artHTML(p0)}</div>
+      <div class="cover-overlay"><h2>${escapeHtml(book.title)}</h2><div class="by">${by} 💖</div></div></div>`;
+  }
+  const i=spread-1, p=book.pages[i];
+  const pageLabel = lang==="zh" ? `${t.pageWord} ${i+1} 页 / ${book.pages.length}` : `${t.pageWord} ${i+1} / ${book.pages.length}`;
+  return `<div class="page"><div class="pageno">${pageLabel}</div>
+    <div class="pemoji" aria-hidden="true">${p.emoji}</div>
+    <div class="art">${artHTML(p)}</div>
+    <div class="text">${escapeHtml(p.text)}</div></div>`;
+}
+function artHTML(p){
+  if(p.img){ return `<img src="${p.img}" alt="" />`; }
+  const loading=(p.img===undefined);
+  const t=I18N[lang];
+  return `<div class="emoji-fallback" aria-hidden="true">${p.emoji||"📖"}</div>
+    ${loading?`<div class="img-loading"><span class="mini"></span>${t.drawing}</div>`:""}`;
+}
+
+function renderPage(){
+  if(!book) return;
+  [...bookEl.querySelectorAll(".page,.flipper")].forEach(n=>n.remove());
+  const node=document.createElement("div"); node.innerHTML=pageNodeHTML(cur);
+  bookEl.insertBefore(node.firstElementChild,$("tapL"));
+  renderDots();
+  $("prevBtn").disabled=cur===0; $("nextBtn").disabled=cur===totalSpreads()-1;
+  bookEl.setAttribute("aria-label", cur===0?I18N[lang].coverWord:(I18N[lang].pageWord+" "+cur));
+  if(ttsOn) speakCurrent();
+}
+function renderDots(){
+  const d=$("dots"); d.innerHTML="";
+  for(let s=0;s<totalSpreads();s++){
+    const b=document.createElement("button"); b.className="dot"; b.setAttribute("role","tab");
+    b.setAttribute("aria-current",s===cur);
+    b.setAttribute("aria-label",s===0?I18N[lang].coverWord:(I18N[lang].pageWord+" "+s));
+    b.onclick=()=>goTo(s); d.appendChild(b);
+  }
+}
+
+/* 翻页 + 3D 动画 */
+function goTo(target){
+  if(!book||flipping) return;
+  target=Math.max(0,Math.min(totalSpreads()-1,target));
+  if(target===cur) return;
+  const dir=target>cur?1:-1;
+  if(reduceMotion){ cur=target; renderPage(); return; }
+  doFlip(target,dir);
+}
+function next(){ goTo(cur+1); }
+function prev(){ goTo(cur-1); }
+
+function doFlip(target,dir){
+  flipping=true; cancelSpeak();
+  const fromHTML=pageNodeHTML(cur), toHTML=pageNodeHTML(target);
+  const flip=document.createElement("div");
+  flip.className="flipper flipping";
+  flip.style.transformOrigin = dir>0?"left center":"right center";
+  flip.innerHTML=`<div class="face front"></div><div class="face back"></div>`;
+  const front=flip.querySelector(".front"), back=flip.querySelector(".back");
+  if(dir>0){ front.innerHTML=fromHTML; back.innerHTML=toHTML; flip.style.transform="rotateY(0deg)"; }
+  else{ front.innerHTML=toHTML; back.innerHTML=fromHTML; flip.style.transform="rotateY(-180deg)"; }
+  flip.style.transition="transform .62s cubic-bezier(.4,.05,.3,1)";
+  [...bookEl.querySelectorAll(".page")].forEach(n=>n.remove());
+  const base=document.createElement("div"); base.innerHTML=toHTML;
+  bookEl.insertBefore(base.firstElementChild,$("tapL"));
+  bookEl.insertBefore(flip,$("tapL"));
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    flip.style.transform = dir>0?"rotateY(-180deg)":"rotateY(0deg)";
+  }));
+  flip.addEventListener("transitionend",function done(){
+    flip.removeEventListener("transitionend",done);
+    flip.remove(); cur=target; flipping=false; renderPage();
+  });
+}
+$("nextBtn").onclick=next; $("prevBtn").onclick=prev; $("tapL").onclick=prev; $("tapR").onclick=next;
+
+bookEl.addEventListener("keydown",e=>{
+  if(e.key==="ArrowRight"){e.preventDefault();next();}
+  else if(e.key==="ArrowLeft"){e.preventDefault();prev();}
+});
+document.addEventListener("keydown",e=>{
+  if(!stage.classList.contains("show")) return;
+  if(document.activeElement&&["INPUT","SELECT","TEXTAREA"].includes(document.activeElement.tagName)) return;
+  if(e.key==="ArrowRight") next(); else if(e.key==="ArrowLeft") prev();
+});
+let touchX=null,touchY=null;
+bookEl.addEventListener("touchstart",e=>{touchX=e.touches[0].clientX;touchY=e.touches[0].clientY;},{passive:true});
+bookEl.addEventListener("touchend",e=>{
+  if(touchX===null) return;
+  const dx=e.changedTouches[0].clientX-touchX, dy=e.changedTouches[0].clientY-touchY;
+  if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)){ dx<0?next():prev(); }
+  touchX=touchY=null;
+});
+
+$("newBookBtn").onclick=()=>{ cancelSpeak(); book=null; stage.classList.remove("show"); setStatus("");
+  $("formCard").scrollIntoView({behavior:reduceMotion?"auto":"smooth"}); };
+
+$("readAloudBtn").onclick=()=>{ const on=document.body.classList.toggle("read-aloud"); $("readAloudBtn").setAttribute("aria-pressed",on); };
+
+$("ttsBtn").onclick=()=>{ ttsOn=!ttsOn; $("ttsBtn").setAttribute("aria-pressed",ttsOn); if(ttsOn) speakCurrent(); else cancelSpeak(); };
+function speakCurrent(){
+  if(!("speechSynthesis"in window)||!book) return;
+  cancelSpeak();
+  const text = cur===0 ? book.title : book.pages[cur-1].text;
+  if(!text) return;
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang = lang==="zh"?"zh-CN":"en-US"; u.rate=0.92; u.pitch=1.05;
+  const v=speechSynthesis.getVoices().find(v=>v.lang&&v.lang.toLowerCase().startsWith(lang==="zh"?"zh":"en"));
+  if(v) u.voice=v;
+  speechSynthesis.speak(u);
+}
+function cancelSpeak(){ if("speechSynthesis"in window) speechSynthesis.cancel(); }
+
+function escapeHtml(s){return (s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+applyLang(); updateAge();
+</script>
+</body>
+</html>

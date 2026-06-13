@@ -109,9 +109,10 @@ async function callStory(env, body) {
     body: JSON.stringify({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
-        maxOutputTokens: 1400,
+        maxOutputTokens: 8192,
         temperature: 0.9,
         responseMimeType: "application/json",
+        thinkingConfig: { thinkingBudget: 0 }, // 关闭思考，避免吃光 token 导致 JSON 被截断
       },
     }),
   });

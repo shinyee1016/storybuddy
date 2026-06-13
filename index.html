@@ -154,9 +154,38 @@ const WORKER_URL = "/api/generate";
   .dot{width:9px;height:9px;border-radius:50%;background:var(--paper-edge);cursor:pointer;border:0}
   .dot[aria-current="true"]{background:var(--accent-deep);transform:scale(1.4)}
 
-  .endbar{display:flex;justify-content:center;margin-top:16px}
+  .endbar{display:flex;justify-content:center;margin-top:12px}
   .endbar[hidden]{display:none}
   .endbar .btn{font-size:16px;padding:14px 22px}
+  .bottom{display:flex;flex-direction:column;align-items:center}
+  /* 紧凑页码：‹  第 x 页  › */
+  .pagelabel{font-weight:800;color:var(--ink-soft);min-width:104px;text-align:center;font-size:15px;
+    background:#fff;border-radius:999px;padding:10px 16px;box-shadow:var(--shadow)}
+
+  /* ===== 全屏阅读模式：故事书满版；工具列与页码列默认收起，上下滑动时滑出 ===== */
+  body.reading{overflow:hidden}
+  body.reading .wrap{max-width:none;padding:0;margin:0}
+  body.reading header.app{display:none}
+  body.reading #stage{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;justify-content:center;
+    background:
+      radial-gradient(1200px 600px at 10% -10%, var(--bg3), transparent 60%),
+      radial-gradient(1000px 700px at 110% 0%, var(--bg2), transparent 55%),
+      linear-gradient(180deg, var(--bg1), #fff)}
+  body.reading .book-scene{flex:1;height:100%;padding:0}
+  body.reading .book{width:min(94vw,calc(90vh * .75));width:min(94vw,calc(90dvh * .75));height:auto;aspect-ratio:3/4;max-height:90dvh}
+  body.reading .book.wide{width:min(97vw,calc(88vh * 1.6));width:min(97vw,calc(88dvh * 1.6));aspect-ratio:1.6/1;max-height:88dvh}
+
+  body.reading .book-bar{position:fixed;top:0;left:0;right:0;z-index:60;margin:0;justify-content:center;gap:8px;flex-wrap:nowrap;
+    padding:calc(env(safe-area-inset-top,0px) + 12px) 12px 16px;
+    background:linear-gradient(rgba(255,246,236,.97),rgba(255,246,236,0));
+    transform:translateY(-112%);opacity:0;pointer-events:none;transition:transform .32s ease,opacity .32s ease}
+  body.reading .bottom{position:fixed;bottom:0;left:0;right:0;z-index:60;gap:10px;
+    padding:18px 12px calc(env(safe-area-inset-bottom,0px) + 16px);
+    background:linear-gradient(rgba(255,246,236,0),rgba(255,246,236,.97));
+    transform:translateY(112%);opacity:0;pointer-events:none;transition:transform .32s ease,opacity .32s ease}
+  body.reading.chrome .book-bar{transform:none;opacity:1;pointer-events:auto}
+  body.reading.chrome .bottom{transform:none;opacity:1;pointer-events:auto}
+  body.reading .nav{margin-top:0}
 
   body.read-aloud .page .text{font-size:clamp(22px,5vw,30px);font-weight:800;color:#1f1710;background:#fff;line-height:1.55;max-height:60%}
   body.read-aloud .page .art{background:#000}
@@ -230,13 +259,15 @@ const WORKER_URL = "/api/generate";
         <button class="tap r" id="tapR" aria-label="下一页"></button>
       </div>
     </div>
-    <div class="nav">
-      <button id="prevBtn" aria-label="上一页">‹</button>
-      <div class="dots" id="dots" role="tablist" aria-label="页面"></div>
-      <button id="nextBtn" aria-label="下一页">›</button>
-    </div>
-    <div class="endbar" id="endBar" hidden>
-      <button class="btn primary" id="againBtn">✨ <span id="againTxt">再做一本绘本</span></button>
+    <div class="bottom" id="bottomBar">
+      <div class="nav">
+        <button id="prevBtn" aria-label="上一页">‹</button>
+        <div class="pagelabel" id="pageLabel" aria-live="polite"></div>
+        <button id="nextBtn" aria-label="下一页">›</button>
+      </div>
+      <div class="endbar" id="endBar" hidden>
+        <button class="btn primary" id="againBtn">✨ <span id="againTxt">再做一本绘本</span></button>
+      </div>
     </div>
   </section>
 
@@ -440,9 +471,30 @@ function showRefused(){
 }
 function setStatus(html){ statusArea.innerHTML=html; }
 
-/* 生成后收起表格，把版面留给绘本；再做一本时恢复 */
-function enterReading(){ $("formCard").style.display="none"; document.querySelector("footer").style.display="none"; }
-function exitReading(){ $("formCard").style.display=""; document.querySelector("footer").style.display=""; }
+/* 生成后收起表格、满版呈现绘本；再做一本时恢复 */
+function enterReading(){
+  $("formCard").style.display="none"; document.querySelector("footer").style.display="none";
+  document.body.classList.add("reading"); showChrome();
+}
+function exitReading(){
+  $("formCard").style.display=""; document.querySelector("footer").style.display="";
+  document.body.classList.remove("reading","chrome"); clearTimeout(chromeTimer);
+}
+
+/* 工具列/页码列：默认收起，上下滑动或翻页时滑出，停顿后自动收起 */
+let chromeTimer=null;
+function showChrome(){
+  if(!document.body.classList.contains("reading")) return;
+  document.body.classList.add("chrome");
+  clearTimeout(chromeTimer);
+  chromeTimer=setTimeout(()=>document.body.classList.remove("chrome"),3200);
+}
+window.addEventListener("wheel",showChrome,{passive:true});
+let chY=null;
+stage.addEventListener("touchstart",e=>{ chY=e.touches[0].clientY; },{passive:true});
+stage.addEventListener("touchmove",e=>{
+  if(chY!==null && Math.abs(e.touches[0].clientY-chY)>20) showChrome();
+},{passive:true});
 
 /* 依序为每页要插图（后端回传 base64） */
 async function loadImages(){
@@ -514,30 +566,30 @@ function render(){
   bookEl.classList.toggle("wide", twoUp);
   const node=document.createElement("div"); node.innerHTML=spreadHTML(cur);
   bookEl.insertBefore(node.firstElementChild,$("tapL"));
-  renderDots();
+  renderPageLabel();
   $("prevBtn").disabled=cur===0; $("nextBtn").disabled=cur===views.length-1;
   $("endBar").hidden = !(cur===views.length-1);     // 最后一页才显示「再做一本」
   bookEl.setAttribute("aria-label", cur===0?I18N[lang].coverWord:(I18N[lang].pageWord+" "+cur));
-  if(ttsOn) speakCurrent();
+  // 注意：朗读不在 render 触发（插图载入会重绘），改在真正翻页时触发，避免语音重叠
 }
 
-function renderDots(){
-  const d=$("dots"); d.innerHTML="";
-  views.forEach((v,s)=>{
-    const b=document.createElement("button"); b.className="dot"; b.setAttribute("role","tab");
-    b.setAttribute("aria-current",s===cur);
-    b.setAttribute("aria-label", s===0?I18N[lang].coverWord:(I18N[lang].pageWord+" "+v.join("-")));
-    b.onclick=()=>goTo(s); d.appendChild(b);
-  });
+/* 紧凑页码：封面 / 第 x 页（宽版两页显示范围） */
+function renderPageLabel(){
+  const t=I18N[lang], el=$("pageLabel");
+  if(cur===0){ el.textContent=t.coverWord; return; }
+  const u=views[cur], a=u[0], b=u[u.length-1];
+  if(lang==="zh") el.textContent = (u.length>1?`第 ${a}-${b} 页`:`第 ${a} 页`);
+  else el.textContent = (u.length>1?`Page ${a}-${b}`:`Page ${a}`);
 }
 
 /* 翻页 + 干净的 3D 动画 */
 function goTo(target){
   if(!book||flipping) return;
   target=Math.max(0,Math.min(views.length-1,target));
+  showChrome();
   if(target===cur) return;
   const dir=target>cur?1:-1;
-  if(reduceMotion){ cur=target; render(); return; }
+  if(reduceMotion){ cur=target; render(); if(ttsOn) speakCurrent(); return; }
   doFlip(target,dir);
 }
 function next(){ goTo(cur+1); }
@@ -562,7 +614,7 @@ function doFlip(target,dir){
   flip.style.transition="transform .6s cubic-bezier(.45,.05,.25,1)";
   requestAnimationFrame(()=>requestAnimationFrame(()=>{ flip.style.transform=`rotateY(${endDeg}deg)`; }));
   let done=false;
-  const finish=()=>{ if(done) return; done=true; cur=target; render(); };
+  const finish=()=>{ if(done) return; done=true; cur=target; render(); if(ttsOn) speakCurrent(); };
   flip.addEventListener("transitionend",e=>{ if(e.propertyName==="transform") finish(); });
   setTimeout(finish, 750); // 保险：动画结束后定格新页
 }
@@ -610,18 +662,41 @@ $("againBtn").onclick=()=>{
 /* ---------- 朗读模式 / 语音 ---------- */
 $("readAloudBtn").onclick=()=>{ const on=document.body.classList.toggle("read-aloud"); $("readAloudBtn").setAttribute("aria-pressed",on); };
 $("ttsBtn").onclick=()=>{ ttsOn=!ttsOn; $("ttsBtn").setAttribute("aria-pressed",ttsOn); if(ttsOn) speakCurrent(); else cancelSpeak(); };
+/* 语音：挑选温柔女声（像妈妈），并避免字句重叠 */
+let voicesCache=[];
+function loadVoices(){ try{ voicesCache=window.speechSynthesis.getVoices()||[]; }catch(e){ voicesCache=[]; } }
+if("speechSynthesis"in window){ loadVoices(); window.speechSynthesis.onvoiceschanged=loadVoices; }
+const FEMALE_PREF={
+  zh:["Tingting","Ting-Ting","婷婷","Mei-Jia","Meijia","美佳","Sinji","Sin-ji","Google 普通话","Xiaoxiao","Xiaoyi","Yaoyao","Huihui","Qianqian","Yating"],
+  en:["Samantha","Victoria","Karen","Tessa","Moira","Serena","Allison","Ava","Susan","Zira","Aria","Jenny","Google US English","Google UK English Female","Female"]
+};
+function pickVoice(){
+  const code=lang==="zh"?"zh":"en";
+  const list=voicesCache.filter(v=>v.lang&&v.lang.toLowerCase().startsWith(code));
+  for(const n of FEMALE_PREF[lang]){
+    const v=list.find(v=>v.name&&v.name.toLowerCase().includes(n.toLowerCase()));
+    if(v) return v;
+  }
+  return list.find(v=>/female|woman|girl|samantha|tingting|mei|婷/i.test(v.name||"")) || list[0] || null;
+}
 function speakCurrent(){
   if(!("speechSynthesis"in window)||!book) return;
   cancelSpeak();
-  const text = cur===0 ? book.title : views[cur].map(u=>book.pages[u-1].text).join(" ");
+  if(!voicesCache.length) loadVoices();
+  const text = cur===0 ? book.title : views[cur].map(u=>book.pages[u-1].text).join(lang==="zh"?"，":". ");
   if(!text) return;
-  const u=new SpeechSynthesisUtterance(text);
-  u.lang = lang==="zh"?"zh-CN":"en-US"; u.rate=0.92; u.pitch=1.05;
-  const v=speechSynthesis.getVoices().find(v=>v.lang&&v.lang.toLowerCase().startsWith(lang==="zh"?"zh":"en"));
-  if(v) u.voice=v;
-  speechSynthesis.speak(u);
+  // cancel 后稍等再说，避免部分浏览器把上一句和这句叠在一起
+  setTimeout(()=>{
+    const u=new SpeechSynthesisUtterance(text);
+    const v=pickVoice();
+    if(v){ u.voice=v; u.lang=v.lang; } else { u.lang=lang==="zh"?"zh-CN":"en-US"; }
+    u.rate=0.84;   // 放慢一点，更温柔顺畅
+    u.pitch=1.15;  // 略高，更柔和的女声
+    u.volume=1;
+    window.speechSynthesis.speak(u);
+  },110);
 }
-function cancelSpeak(){ if("speechSynthesis"in window) speechSynthesis.cancel(); }
+function cancelSpeak(){ if("speechSynthesis"in window) window.speechSynthesis.cancel(); }
 
 /* ============================================================
    储存绘本到离线档（自带阅读器的单一 HTML，可离线开启）

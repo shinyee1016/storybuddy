@@ -17,7 +17,8 @@
 
 const TEXT_MODEL = "gemini-2.5-flash";
 const IMAGE_MODEL = "gemini-3.1-flash-image";
-const BASE = "https://generativelanguage.googleapis.com/v1/models";
+// 注意：使用 v1beta —— responseMimeType（JSON 模式）与 responseModalities（出图）只有 v1beta 支援，v1 会回 400。
+const BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), {

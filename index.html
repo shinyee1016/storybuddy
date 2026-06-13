@@ -7,6 +7,15 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400..800&family=Fredoka:wght@400..600&display=swap" rel="stylesheet" />
+<!-- PWA：可「加入主画面」像 App 一样使用 -->
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#ff8a5b" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="故事伙伴" />
+<link rel="apple-touch-icon" href="/apple-touch-icon-180.png" />
+<link rel="icon" type="image/png" href="/icon-192.png" />
 <script>
 /* ============================================================
    后端端点：Cloudflare Pages Functions，与前端同网域。
@@ -130,7 +139,8 @@ const WORKER_URL = "/api/generate";
     color:var(--ink);border-top:1px solid var(--paper-edge);max-height:44%;overflow:auto}
   .page .pageno{position:absolute;top:12px;left:14px;background:rgba(255,255,255,.85);border-radius:999px;padding:3px 12px;
     font-size:12px;font-weight:800;color:var(--ink-soft);z-index:2}
-  .page .pemoji{position:absolute;top:10px;right:14px;font-size:26px;z-index:2}
+  .page .pemoji{position:absolute;top:12px;right:14px;font-size:20px;z-index:2;background:rgba(255,255,255,.85);
+    border-radius:999px;width:34px;height:34px;display:grid;place-items:center;box-shadow:var(--shadow)}
   .page.cover .art{background:linear-gradient(150deg,#ffcaa6,#c9b6ff)}
   .page.cover .cover-overlay{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:26px;
     background:linear-gradient(transparent,rgba(40,20,10,.55));color:#fff}
@@ -505,7 +515,7 @@ async function loadImages(){
       const r=await workerCall({
         action:"image",
         characterSheet:p.characterSheet,
-        imagePrompt:p.imagePrompt + IMG_SAFETY_SUFFIX,
+        imagePrompt:p.imagePrompt,   // 安全/禁字规则由后端在 prompt 最前面加重，权重更高
         safety:SAFETY_RULES
       });
       p.img = (r&&r.image) ? ("data:"+(r.mime||"image/png")+";base64,"+r.image) : null;
@@ -547,8 +557,9 @@ function pageHTML(unit){
   }
   const i=unit-1, p=book.pages[i];
   const label = lang==="zh" ? `${t.pageWord} ${i+1} 页 / ${book.pages.length}` : `${t.pageWord} ${i+1} / ${book.pages.length}`;
-  return `<div class="page"><div class="pageno">${label}</div>
-    <div class="pemoji" aria-hidden="true">${p.emoji}</div>
+  // 插图载入后就不再叠那个角落 emoji（避免压在画面上看起来跑位）
+  const emojiBadge = p.img ? "" : `<div class="pemoji" aria-hidden="true">${p.emoji}</div>`;
+  return `<div class="page"><div class="pageno">${label}</div>${emojiBadge}
     <div class="art">${artHTML(p)}</div>
     <div class="text">${escapeHtml(p.text)}</div></div>`;
 }
@@ -769,6 +780,11 @@ function offlineHTML(data, lng){
 function escapeHtml(s){return (s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 
 applyLang(); updateAge();
+
+/* 注册 Service Worker（离线快取，支援「加入主画面」当 App 用） */
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>{ navigator.serviceWorker.register("/sw.js").catch(()=>{}); });
+}
 </script>
 </body>
 </html>

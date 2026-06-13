@@ -79,7 +79,7 @@ ${SAFETY_RULES}
 
 角色一致性：构想「一个」主角，写出一份固定的外观描述（种类/外型、颜色、服装、特征、画风），作为 characterSheet 在每一页原封不动重复使用，让插图看起来完全一致。
 
-插图描述：每一页的 imagePrompt 一律用「英文」描述该页画面，且永远包含同一个主角；imagePrompt 自身也必须安全（无暴力/武器/恐怖/真实名人，柔和温暖绘本风格）。
+插图描述：每一页的 imagePrompt 一律用「英文」描述该页画面，且永远包含同一个主角；imagePrompt 自身也必须安全（无暴力/武器/恐怖/真实名人，柔和温暖绘本风格）。imagePrompt 只描述纯视觉画面，绝对不要要求画面中出现任何文字、字母、招牌、标志、书本上的字、报纸或对话框（成品图中不可有任何字）。
 
 写作风格：${style}
 大约写 ${lv.pages} 页（封面不计入；pages 数组每个元素是一页）。
@@ -92,11 +92,17 @@ ${namePart}
 }
 
 function buildImagePrompt({ characterSheet, imagePrompt }) {
+  // 关键：把「禁止任何文字」与风格放在 prompt 最前面 —— 扩散模型对开头的词权重更高，
+  // 这样能大幅减少图片里乱码文字（之前出现在结尾，权重低、容易被忽略）。
+  const lead =
+    "Wordless children's picture-book illustration with ABSOLUTELY NO text anywhere in the image. " +
+    "No letters, no words, no writing, no captions, no subtitles, no speech bubbles, no signs, no labels, " +
+    "no numbers, no alphabet, no random gibberish characters, no watermark, no signature. " +
+    "Soft cozy storybook art, warm pastel colours, rounded friendly shapes, gentle even lighting. " +
+    "No violence, no weapons, no fear or horror, no scary monsters, no real people or celebrities. ";
   const sheet = characterSheet ? `Main character (keep identical on every page): ${characterSheet}. ` : "";
-  const safety =
-    "Gentle, soft, cozy children's picture-book illustration. Warm pastel colours, rounded friendly shapes. " +
-    "ABSOLUTELY NO violence, NO weapons, NO fear or horror, NO scary monsters, NO real people or celebrities, no text in the image.";
-  return `${sheet}${imagePrompt || ""} ${safety}`;
+  const scene = imagePrompt ? `Scene: ${imagePrompt}. ` : "";
+  return lead + sheet + scene + "The picture must contain no text or letters of any kind.";
 }
 
 /* ============================================================

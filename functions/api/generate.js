@@ -147,21 +147,44 @@ function parseStory(raw) {
 
 async function callImage(env, body) {
   const prompt = buildImagePrompt(body);
-  const res = await fetch(`${BASE}/${IMAGE_MODEL}:generateContent`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { responseModalities: ["IMAGE"] },
-    }),
-  });
-  if (!res.ok) return json({ image: null, error: "image model " + res.status, detail: await res.text() }, 200);
 
-  const data = await res.json();
-  const parts = data?.candidates?.[0]?.content?.parts || [];
-  const imgPart = parts.find((p) => p.inlineData && p.inlineData.data) || parts.find((p) => p.inline_data && p.inline_data.data);
-  const b64 = imgPart ? (imgPart.inlineData?.data || imgPart.inline_data?.data) : null;
-  return json({ image: b64 || null });
+  // 1) 先试 Gemini 出图（若该 Google 帐号已开通付费 billing 就会成功并优先使用）
+  try {
+    const res = await fetch(`${BASE}/${IMAGE_MODEL}:generateContent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { responseModalities: ["IMAGE"] },
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const parts = data?.candidates?.[0]?.content?.parts || [];
+      const imgPart = parts.find((p) => p.inlineData?.data || p.inline_data?.data);
+      const b64 = imgPart ? (imgPart.inlineData?.data || imgPart.inline_data?.data) : null;
+      const mime = imgPart ? (imgPart.inlineData?.mimeType || imgPart.inline_data?.mime_type || "image/png") : "image/png";
+      if (b64) return json({ image: b64, mime, source: "gemini" });
+    }
+    // 非 2xx（例如免费额度 429）→ 落到下面的免费后备
+  } catch (_) { /* 落到免费后备 */ }
+
+  // 2) 免费后备：Cloudflare Workers AI（需在 Pages 项目绑定一个名为 AI 的 Workers AI binding）
+  //    出图模型 Flux schnell，免金钥、图片描述不出 Cloudflare，每天有免费额度。
+  if (env.AI) {
+    try {
+      const out = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", {
+        prompt: prompt.slice(0, 2048), // Flux prompt 上限 2048 字元
+        steps: 6,
+      });
+      if (out && out.image) return json({ image: out.image, mime: "image/jpeg", source: "workers-ai" });
+      return json({ image: null, error: "workers-ai returned no image" });
+    } catch (e) {
+      return json({ image: null, error: "workers-ai failed", detail: String(e) });
+    }
+  }
+
+  return json({ image: null, error: "no image provider: 请为 Pages 项目加一个名为 AI 的 Workers AI 绑定，或为 Gemini 开通付费" });
 }
 
 /* ============================================================

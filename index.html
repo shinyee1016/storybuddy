@@ -430,7 +430,7 @@ async function loadImages(){
         imagePrompt:p.imagePrompt + IMG_SAFETY_SUFFIX,
         safety:SAFETY_RULES
       });
-      p.img = (r&&r.image) ? ("data:image/png;base64,"+r.image) : null;
+      p.img = (r&&r.image) ? ("data:"+(r.mime||"image/png")+";base64,"+r.image) : null;
     }catch(e){ p.img=null; }
     if((cur-1)===i || (cur===0&&i===0)) renderPage();
   }
